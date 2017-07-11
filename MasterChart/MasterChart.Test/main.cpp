@@ -8,11 +8,19 @@
 
 #include <iostream>
 #include "../MasterChart/Shape.h"
+#include "Runner.h"
 
 int main() {
-    
-    Shape* shape = new Shape();
+    Runner runner;
 
+    try {
+        runner.Run();
+    }
+    catch (const std::runtime_error& e) {
+        std::cerr << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
 
-    return shape->test();
+    return EXIT_SUCCESS;
+
 }

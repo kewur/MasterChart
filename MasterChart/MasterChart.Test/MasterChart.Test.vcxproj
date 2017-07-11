@@ -146,11 +146,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Runner.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MasterChart\MasterChart.vcxproj">
       <Project>{033b9c27-79c9-4425-bdd7-f65bcbe2a692}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Runner.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

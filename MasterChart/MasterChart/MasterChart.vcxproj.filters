@@ -13,15 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\Primitive">
+      <UniqueIdentifier>{bf4270d0-6606-4b60-81ac-91657c56acbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Primitive">
+      <UniqueIdentifier>{4be22852-2995-416f-be12-384cf22ac47c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Shape.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Primitive</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shape.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\Primitive</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
