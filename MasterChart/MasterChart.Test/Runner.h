@@ -22,9 +22,11 @@ public:
     
 private:
     void InitializeVulkan();
+    void CreateInstance();
     std::vector<const char*> GetRequiredExtensions();
     void SetupValidationLayer();
     static bool CheckValidationLayerSupport(std::vector<const char*> validationLayers);
+    void SetupDebugCallback();
     void InitializeWindow();
 
     void MainLoop();
@@ -35,4 +37,5 @@ private:
     GLFWwindow* _Window;
     VkInstance _Instance;
     bool _EnableValidationLayers = false;
+    VkDebugReportCallbackEXT _DebugReportCallback;
 };

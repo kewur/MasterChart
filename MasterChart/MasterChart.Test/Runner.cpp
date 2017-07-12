@@ -4,9 +4,46 @@
 #include <iostream>
 
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
+    VkDebugReportObjectTypeEXT objType,
+    uint64_t obj,
+    size_t location,
+    int32_t code,
+    const char* layerPrefix,
+    const char* msg,
+    void* userData)
+{
+    std::cerr << "validation layer: " << msg << std::endl;
+    return VK_FALSE;
+}
+
+VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
+    auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+    if (func != nullptr) {
+        return func(instance, pCreateInfo, pAllocator, pCallback);
+    }
+    else {
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    }
+}
+
 void Runner::InitializeVulkan()
 {
-    SetupValidationLayer();
+#ifdef NDEBUG
+    _EnableValidationLayers = false;
+#endif
+    _EnableValidationLayers = true;
+
+    CreateInstance();
+    SetupDebugCallback();
+
+}
+
+void Runner::CreateInstance()
+{
+    if (_EnableValidationLayers && !CheckValidationLayerSupport()) {
+        throw std::runtime_error("validation layers requested, but not available!");
+    }
 
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -29,7 +66,6 @@ void Runner::InitializeVulkan()
 
     if (vkCreateInstance(&createInfo, nullptr, &_Instance) != VK_SUCCESS)
         throw std::runtime_error("Can't create Vulkan instance");
-
 }
 
 std::vector<const char*> Runner::GetRequiredExtensions()
@@ -50,14 +86,10 @@ std::vector<const char*> Runner::GetRequiredExtensions()
 
 void Runner::SetupValidationLayer()
 {
-#ifdef NDEBUG
-    return;
-#endif
-    _EnableValidationLayers = true;
-    const std::vector<const char*> validationLayers = { "VK_LAYER_LUNARG_standard_validation" };
 
-    if (!CheckValidationLayerSupport(validationLayers))
-        throw std::runtime_error("Requested validation layers not supported");
+
+   
+    
 }
 
 bool Runner::CheckValidationLayerSupport(std::vector<const char*> validationLayers) {
@@ -87,11 +119,28 @@ bool Runner::CheckValidationLayerSupport(std::vector<const char*> validationLaye
 }
 
 
+void Runner::SetupDebugCallback()
+{
+    if (!_EnableValidationLayers)
+        return;
+
+    VkDebugReportCallbackCreateInfoEXT createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+    createInfo.pfnCallback = DebugCallback;
+
+    if (CreateDebugReportCallbackEXT(_Instance, &createInfo, nullptr, &_DebugReportCallback) != VK_SUCCESS) {
+        throw std::runtime_error("failed to set up debug callback!");
+    }
+
+}
+
 void Runner::InitializeWindow()
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
     _Window = glfwCreateWindow(WindowWidth, WindowHeight, "MasterChart.Test", nullptr, nullptr);
 }
 
