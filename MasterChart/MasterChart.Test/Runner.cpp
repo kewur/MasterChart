@@ -3,19 +3,21 @@
 #include <vector>
 #include <iostream>
 
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags,
-    VkDebugReportObjectTypeEXT objType,
-    uint64_t obj,
-    size_t location,
-    int32_t code,
-    const char* layerPrefix,
-    const char* msg,
-    void* userData)
-{
+static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) {
     std::cerr << "validation layer: " << msg << std::endl;
+
     return VK_FALSE;
 }
+
+const std::vector<const char*> validationLayers = {
+    "VK_LAYER_LUNARG_standard_validation"
+};
+
+#ifdef NDEBUG
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
 
 VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
     auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
@@ -27,134 +29,167 @@ VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCa
     }
 }
 
+void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator) {
+    auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+    if (func != nullptr) {
+        func(instance, callback, pAllocator);
+    }
+}
+
+void Runner::InitializeWindow() {
+    glfwInit();
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+    _Window = glfwCreateWindow(WindowWidth, WindowHeight, "Master Chart Test", nullptr, nullptr);
+}
+
 void Runner::InitializeVulkan()
 {
-#ifdef NDEBUG
-    _EnableValidationLayers = false;
-#endif
-    _EnableValidationLayers = true;
-
     CreateInstance();
     SetupDebugCallback();
+    ChoosePhysicialDevice();
+}
+
+void Runner::MainLoop() const
+{
+    while (!glfwWindowShouldClose(_Window)) {
+        glfwPollEvents();
+    }
+}
+
+void Runner::ChoosePhysicialDevice()
+{
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(_Instance, &deviceCount, nullptr);
+
+    if (deviceCount == 0)
+        throw std::runtime_error("No GPUs with Vulkan support found, make sure you have installed the Vulkan runtime.");
+
+
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+
+    for (const auto& device : devices)
+    {
+        if (IsDeviceSuitable(device))
+        {
+            _PhysicalDevice = device;
+            break;
+        }
+    }
+
+    if (_PhysicalDevice == VK_NULL_HANDLE)
+        throw std::runtime_error("Failed to find a suitable GPU");
 
 }
 
-void Runner::CreateInstance()
+bool Runner::IsDeviceSuitable(VkPhysicalDevice device)
 {
-    if (_EnableValidationLayers && !CheckValidationLayerSupport()) {
+    VkPhysicalDeviceProperties deviceProperties;
+    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+    VkPhysicalDeviceFeatures deviceFeatures;
+    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
+}
+
+void Runner::CleanUp() {
+    DestroyDebugReportCallbackEXT(_Instance, _Callback, nullptr);
+    vkDestroyInstance(_Instance, nullptr);
+
+    glfwDestroyWindow(_Window);
+
+    glfwTerminate();
+}
+
+void Runner::CreateInstance() {
+    if (enableValidationLayers && !CheckValidationLayerSupport()) {
         throw std::runtime_error("validation layers requested, but not available!");
     }
 
-    VkApplicationInfo applicationInfo = {};
-    applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    applicationInfo.pApplicationName = "MasterChart Test";
-    applicationInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    applicationInfo.pEngineName = "No Engine";
-    applicationInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    applicationInfo.apiVersion = VK_API_VERSION_1_0;
+    VkApplicationInfo appInfo = {};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName = "Hello Triangle";
+    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.pEngineName = "No Engine";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.apiVersion = VK_API_VERSION_1_0;
 
     VkInstanceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &applicationInfo;
+    createInfo.pApplicationInfo = &appInfo;
 
-    const std::vector<const char*> extensionNames = GetRequiredExtensions();
+    auto extensions = GetRequiredExtensions();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
 
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensionNames.size());
-    createInfo.ppEnabledExtensionNames = extensionNames.data();
-
-    createInfo.enabledLayerCount = 0;
-
-    if (vkCreateInstance(&createInfo, nullptr, &_Instance) != VK_SUCCESS)
-        throw std::runtime_error("Can't create Vulkan instance");
-}
-
-std::vector<const char*> Runner::GetRequiredExtensions()
-{
-    std::vector<const char*> extensionNamesVector;
-
-    unsigned int extensionsCount = 0;
-    const char ** extensionNames = glfwGetRequiredInstanceExtensions(&extensionsCount);
-
-    for (unsigned int i = 0; i < extensionsCount; i++)
-        extensionNamesVector.push_back(extensionNames[i]);
-
-    if (_EnableValidationLayers)
-        extensionNamesVector.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-
-    return extensionNamesVector;
-}
-
-void Runner::SetupValidationLayer()
-{
-
-
-   
-    
-}
-
-bool Runner::CheckValidationLayerSupport(std::vector<const char*> validationLayers) {
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-    for (const char* layerName : validationLayers)
-    {
-        bool layerFound = false;
-
-        for (const auto& layerProperties : availableLayers)
-        {
-            if (strcmp(layerName, layerProperties.layerName) == 0)
-            {
-                layerFound = true;
-                break;
-            }
-        }
-
-        if (!layerFound)
-            return false;
+    if (enableValidationLayers) {
+        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+        createInfo.ppEnabledLayerNames = validationLayers.data();
+    }
+    else {
+        createInfo.enabledLayerCount = 0;
     }
 
-    return true;
+    if (vkCreateInstance(&createInfo, nullptr, &_Instance) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create instance!");
+    }
 }
 
-
-void Runner::SetupDebugCallback()
-{
-    if (!_EnableValidationLayers)
-        return;
+void Runner::SetupDebugCallback() {
+    if (!enableValidationLayers) return;
 
     VkDebugReportCallbackCreateInfoEXT createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
     createInfo.pfnCallback = DebugCallback;
 
-    if (CreateDebugReportCallbackEXT(_Instance, &createInfo, nullptr, &_DebugReportCallback) != VK_SUCCESS) {
-        throw std::runtime_error("failed to set up debug callback!");
-    }
-
-}
-
-void Runner::InitializeWindow()
-{
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-    _Window = glfwCreateWindow(WindowWidth, WindowHeight, "MasterChart.Test", nullptr, nullptr);
-}
-
-void Runner::MainLoop()
-{
-    while (!glfwWindowShouldClose(_Window))
-    {
-        glfwPollEvents();
+    if (CreateDebugReportCallbackEXT(_Instance, &createInfo, nullptr, &_Callback) != VK_SUCCESS) {
+        throw std::runtime_error("failed to set up debug _Callback!");
     }
 }
 
-void Runner::CleanUp()
-{
-    vkDestroyInstance(_Instance, nullptr);
-    glfwDestroyWindow(_Window);
-    glfwTerminate();
+std::vector<const char*> Runner::GetRequiredExtensions() {
+    std::vector<const char*> extensions;
+
+    unsigned int glfwExtensionCount = 0;
+    const char ** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+    for (unsigned int i = 0; i < glfwExtensionCount; i++) {
+        extensions.push_back(glfwExtensions[i]);
+    }
+
+    if (enableValidationLayers) {
+        extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    }
+
+    return extensions;
 }
+
+bool Runner::CheckValidationLayerSupport() {
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+    for (const char* layerName : validationLayers) {
+        bool layerFound = false;
+
+        for (const auto& layerProperties : availableLayers) {
+            if (strcmp(layerName, layerProperties.layerName) == 0) {
+                layerFound = true;
+                break;
+            }
+        }
+
+        if (!layerFound) {
+            return false;
+        }
+    }
+
+    return true;
+}
+

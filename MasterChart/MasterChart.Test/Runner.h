@@ -23,19 +23,21 @@ public:
 private:
     void InitializeVulkan();
     void CreateInstance();
-    std::vector<const char*> GetRequiredExtensions();
+    static std::vector<const char*> GetRequiredExtensions();
     void SetupValidationLayer();
-    static bool CheckValidationLayerSupport(std::vector<const char*> validationLayers);
+    static bool CheckValidationLayerSupport();
     void SetupDebugCallback();
     void InitializeWindow();
 
-    void MainLoop();
-    
+    void MainLoop() const;
+    void ChoosePhysicialDevice();
+    bool IsDeviceSuitable(VkPhysicalDevice device);
+
     void CleanUp();
 
 private:
+    VkPhysicalDevice _PhysicalDevice = VK_NULL_HANDLE;
     GLFWwindow* _Window;
     VkInstance _Instance;
-    bool _EnableValidationLayers = false;
-    VkDebugReportCallbackEXT _DebugReportCallback;
+    VkDebugReportCallbackEXT _Callback;
 };
