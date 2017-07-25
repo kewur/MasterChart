@@ -145,6 +145,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GraphicsPipeline.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Runner.cpp" />
   </ItemGroup>
@@ -154,7 +155,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GraphicsPipeline.h" />
+    <ClInclude Include="QueueFamilyIndices.h" />
     <ClInclude Include="Runner.h" />
+    <ClInclude Include="SwapChainSupportDetails.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

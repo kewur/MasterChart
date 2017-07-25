@@ -21,9 +21,21 @@
     <ClCompile Include="Runner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphicsPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Runner.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QueueFamilyIndices.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SwapChainSupportDetails.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphicsPipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
